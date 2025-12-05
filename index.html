@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Meruňková Láska</title>
     <style>
-        /* ZDE JE CSS STYL */
         body {
             background-color: #2c3e50;
             display: flex;
@@ -18,6 +17,7 @@
             flex-direction: column;
             touch-action: none; 
             user-select: none;
+            overflow: hidden; /* Zabrání posouvání stránky */
         }
 
         canvas {
@@ -25,8 +25,9 @@
             background-color: #87CEEB;
             image-rendering: pixelated;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            /* Přizpůsobení velikosti displeje */
-            max-width: 95%; 
+            /* Hra se přizpůsobí šířce mobilu, ale zachová poměr */
+            width: 95vw; 
+            max-width: 640px;
             height: auto;
             display: block;
         }
@@ -35,46 +36,42 @@
             display: flex;
             gap: 40px;
             margin-top: 20px;
-            margin-bottom: 10px;
+            /* Odstraníme spodní margin, protože tam už není text */
+            margin-bottom: 0;
         }
 
         .btn {
-            width: 80px;
-            height: 60px;
+            width: 90px;
+            height: 70px;
             background-color: #e67e22;
             border: 4px solid #d35400;
-            border-radius: 10px;
-            font-size: 30px;
+            border-radius: 15px;
+            font-size: 35px;
             color: white;
             cursor: pointer;
             user-select: none; 
             -webkit-user-select: none;
             -webkit-tap-highlight-color: transparent;
+            /* Flex pro centrování šipky v tlačítku */
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         .btn:active {
             background-color: #d35400;
-            transform: translateY(2px);
+            transform: translateY(4px);
         }
 
-        #info {
-            text-align: center;
-            font-size: 14px;
-        }
     </style>
 </head>
 <body>
 
-<canvas id="gameCanvas" width="320" height="240"></canvas>
+<canvas id="gameCanvas" width="640" height="480"></canvas>
 
 <div id="controls">
     <button id="btnLeft" class="btn">⬅️</button>
     <button id="btnRight" class="btn">➡️</button>
-</div>
-
-<div id="info">
-    <p>Na počítači: Šipky | Na mobilu: Tlačítka</p>
-    <p>Cíl: 15 meruněk ❤️</p>
 </div>
 
 <script>
@@ -90,35 +87,36 @@
     let isCutscene = false;
     let kissHappened = false;
 
-    const groundHeight = 20;
-    const apricotSize = 12; 
+    // Zvětšili jsme zemi, aby to na velké mapě vypadalo dobře
+    const groundHeight = 40; 
+    const apricotSize = 20; // Větší meruňky pro větší mapu
 
     // --- POSTAVY ---
     const adelka = {
         x: canvas.width / 2 + 50,
-        y: canvas.height - groundHeight - 32, 
-        width: 32,
-        height: 32,
+        y: canvas.height - groundHeight - 48, // 48 je nová výška postavy (zvětšeno)
+        width: 32, // Šířka zůstává (hubená)
+        height: 48, // Vyšší postava
         color: '#e74c3c',
-        speed: 5,
+        speed: 8, // ZRYCHLENO pro větší mapu
         dx: 0,
-        basketOffsetX: 20,
-        basketWidth: 12
+        basketOffsetX: 24,
+        basketWidth: 16
     };
 
     const mirecek = {
-        x: -40,
-        y: canvas.height - groundHeight - 34, 
+        x: -50,
+        y: canvas.height - groundHeight - 50, 
         width: 32,
-        height: 34,
+        height: 50,
         color: '#3498db',
         pantsColor: '#2c3e50',
-        speed: 2,
+        speed: 4, // Také trochu rychlejší chůze
         active: false
     };
 
     let apricots = [];
-    let spawnRate = 60; 
+    let spawnRate = 50; // Padají trochu častěji
     let frameCount = 0;
 
     // --- OVLÁDÁNÍ KLÁVESNICÍ ---
@@ -161,40 +159,43 @@
         const baseX = Math.round(char.x);
         const baseY = Math.round(char.y);
 
+        // Zvětšujeme měřítko vykreslování
+        
         // Hlava
         ctx.fillStyle = '#FFCC99';
-        ctx.fillRect(baseX + 8, baseY, 16, 12);
+        ctx.fillRect(baseX + 4, baseY, 24, 16); // Větší hlava
         
         // Vlasy
         if (isMale) {
             // Mireček - krátké tmavé
             ctx.fillStyle = '#2c3e50';
-            ctx.fillRect(baseX + 6, baseY, 20, 6);
+            ctx.fillRect(baseX + 2, baseY, 28, 8);
         } else {
-            // Adélka - hnědé DLOUHÉ vlasy (ÚPRAVA ZDE)
+            // Adélka - DLOUHÉ HNEDÉ
             ctx.fillStyle = '#8B4513';
-            ctx.fillRect(baseX + 4, baseY, 24, 4);    // Horní část
-            // Prodloužení vlasů dolů přes záda/šaty
-            ctx.fillRect(baseX + 4, baseY + 4, 24, 22); 
+            ctx.fillRect(baseX, baseY, 32, 6);    // Pěšinka
+            // Vlasy dolů přes záda (dlouhé)
+            ctx.fillRect(baseX, baseY + 6, 32, 36); 
         }
         
         // Tělo
         ctx.fillStyle = char.color;
-        ctx.fillRect(baseX + 8, baseY + 12, 16, 14);
+        ctx.fillRect(baseX + 6, baseY + 16, 20, 20); // Větší tělo
 
         // Nohy / Sukně
         if (isMale) {
             ctx.fillStyle = char.pantsColor;
-            ctx.fillRect(baseX + 8, baseY + 26, 16, 8);
+            ctx.fillRect(baseX + 6, baseY + 36, 20, 14); // Kalhoty
         } else {
-            ctx.fillRect(baseX + 6, baseY + 26, 20, 6);
+            // Šaty pokračují
+            ctx.fillRect(baseX + 4, baseY + 36, 24, 12); 
         }
 
-        // Košík
+        // Košík (Adélka)
         if (!isMale) {
             ctx.fillStyle = '#D2691E';
-            ctx.fillRect(baseX + char.basketOffsetX, baseY + 16, char.basketWidth, 12); 
-            ctx.fillRect(baseX + char.basketOffsetX, baseY + 12, char.basketWidth, 4);
+            ctx.fillRect(baseX + char.basketOffsetX, baseY + 24, char.basketWidth, 16); 
+            ctx.fillRect(baseX + char.basketOffsetX, baseY + 20, char.basketWidth, 4); // Ucho
         }
     }
 
@@ -202,30 +203,35 @@
         ctx.fillStyle = '#FFA500'; 
         ctx.fillRect(x, y + 4, apricotSize, apricotSize - 4);
         ctx.fillStyle = '#FFD700';
-        ctx.fillRect(x + 4, y + 8, 4, 4);
+        ctx.fillRect(x + 6, y + 8, 6, 6); // Lesk
         ctx.fillStyle = '#228B22'; 
-        ctx.fillRect(x + 4, y, 4, 4);
+        ctx.fillRect(x + 8, y, 4, 4); // Stopka
     }
 
     function drawBackground() {
         ctx.fillStyle = '#2ecc71';
         ctx.fillRect(0, canvas.height - groundHeight, canvas.width, groundHeight);
+        
+        // Větší strom
         ctx.fillStyle = '#8B4513';
-        ctx.fillRect(40, 0, 30, canvas.height - groundHeight);
-        ctx.fillRect(250, 0, 20, canvas.height - groundHeight);
+        ctx.fillRect(60, 0, 40, canvas.height - groundHeight);
+        ctx.fillRect(450, 0, 30, canvas.height - groundHeight); // Druhý kmen
+        
+        // Listí
         ctx.fillStyle = '#228B22';
-        ctx.fillRect(0, 0, canvas.width, 40);
+        ctx.fillRect(0, 0, canvas.width, 80);
         ctx.fillStyle = '#32CD32';
-        ctx.fillRect(20, 20, canvas.width-40, 30);
+        ctx.fillRect(30, 40, canvas.width-60, 50);
     }
 
     function drawHeart(x, y) {
         ctx.fillStyle = '#e74c3c';
-        ctx.fillRect(x + 4, y, 4, 4);
-        ctx.fillRect(x + 12, y, 4, 4);
-        ctx.fillRect(x, y + 4, 20, 4);
-        ctx.fillRect(x + 4, y + 8, 12, 4);
-        ctx.fillRect(x + 8, y + 12, 4, 4);
+        const size = 2; // Zvětšení srdce
+        ctx.fillRect(x + 2*size, y, 2*size, 2*size);
+        ctx.fillRect(x + 6*size, y, 2*size, 2*size);
+        ctx.fillRect(x, y + 2*size, 10*size, 2*size);
+        ctx.fillRect(x + 2*size, y + 4*size, 6*size, 2*size);
+        ctx.fillRect(x + 4*size, y + 6*size, 2*size, 2*size);
     }
 
     // --- HLAVNÍ SMYČKA ---
@@ -244,7 +250,7 @@
                     apricots.push({
                         x: Math.random() * (canvas.width - apricotSize),
                         y: -apricotSize,
-                        speed: Math.random() * 2 + 1
+                        speed: Math.random() * 3 + 2 // Rychlejší pád na větší mapě
                     });
                 }
             } else {
@@ -256,11 +262,12 @@
 
             for (let i = apricots.length - 1; i >= 0; i--) {
                 apricots[i].y += apricots[i].speed;
+                // Větší detekční zóna pro košík
                 const basketRect = {
-                    x: adelka.x + adelka.basketOffsetX,
-                    y: adelka.y + 12,
-                    width: adelka.basketWidth,
-                    height: 16
+                    x: adelka.x + adelka.basketOffsetX - 5,
+                    y: adelka.y + 20,
+                    width: adelka.basketWidth + 10,
+                    height: 20
                 };
                 if (
                     apricots[i].x < basketRect.x + basketRect.width &&
@@ -276,7 +283,7 @@
             }
         } else if (isCutscene && !kissHappened) {
             // FÁZE 2
-            const targetX = adelka.x - 30;
+            const targetX = adelka.x - 40; // Zastaví se trochu dál (kvůli větším postavám)
             if (mirecek.x < targetX) {
                 mirecek.x += mirecek.speed;
             } else {
@@ -295,25 +302,25 @@
         for (const apricot of apricots) drawApricot(apricot.x, apricot.y);
 
         ctx.fillStyle = 'white';
-        ctx.font = '16px "Courier New"';
+        ctx.font = '24px "Courier New"'; // Větší písmo
         if (!isCutscene && !gameOver) {
-            ctx.fillText('Košík: ' + score + ' / ' + winScore, 10, 30);
+            ctx.fillText('Košík: ' + score + ' / ' + winScore, 20, 40);
         }
 
-        if (kissHappened) drawHeart(adelka.x - 15, adelka.y - 20);
+        if (kissHappened) drawHeart(adelka.x - 20, adelka.y - 30);
 
         if (gameOver) {
             ctx.fillStyle = 'rgba(0,0,0,0.6)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
             ctx.fillStyle = '#FF69B4';
-            ctx.font = '24px "Courier New"';
+            ctx.font = 'bold 36px "Courier New"';
             ctx.textAlign = 'center';
             ctx.fillText('LÁSKA ZVÍTĚZILA!', canvas.width / 2, canvas.height / 2);
             
             ctx.fillStyle = 'white';
-            ctx.font = '14px "Courier New"';
-            // UPRAVENÝ VÍTĚZNÝ TEXT ZDE:
-            ctx.fillText('Adélka s Mirečkem mají 15 meruněk', canvas.width / 2, canvas.height / 2 + 30);
+            ctx.font = '20px "Courier New"';
+            ctx.fillText('Adélka s Mirečkem mají 15 meruněk', canvas.width / 2, canvas.height / 2 + 50);
         }
     }
 
