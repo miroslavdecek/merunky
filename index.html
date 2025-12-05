@@ -4,9 +4,64 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Meruňková Láska</title>
-    
-    <link rel="stylesheet" href="style.css"> 
+    <style>
+        /* ZDE JE CSS STYL */
+        body {
+            background-color: #2c3e50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+            flex-direction: column;
+            touch-action: none; 
+            user-select: none;
+        }
 
+        canvas {
+            border: 4px solid #ecf0f1;
+            background-color: #87CEEB;
+            image-rendering: pixelated;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            /* Přizpůsobení velikosti displeje */
+            max-width: 95%; 
+            height: auto;
+            display: block;
+        }
+
+        #controls {
+            display: flex;
+            gap: 40px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            width: 80px;
+            height: 60px;
+            background-color: #e67e22;
+            border: 4px solid #d35400;
+            border-radius: 10px;
+            font-size: 30px;
+            color: white;
+            cursor: pointer;
+            user-select: none; 
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn:active {
+            background-color: #d35400;
+            transform: translateY(2px);
+        }
+
+        #info {
+            text-align: center;
+            font-size: 14px;
+        }
+    </style>
 </head>
 <body>
 
@@ -22,7 +77,193 @@
     <p>Cíl: 15 meruněk ❤️</p>
 </div>
 
-<script src="game.js"></script>
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const btnLeft = document.getElementById('btnLeft');
+    const btnRight = document.getElementById('btnRight');
 
-</body>
-</html>
+    // --- NASTAVENÍ ---
+    let score = 0;
+    const winScore = 15;
+    let gameOver = false;
+    let isCutscene = false;
+    let kissHappened = false;
+
+    const groundHeight = 20;
+    const apricotSize = 12; 
+
+    // --- POSTAVY ---
+    const adelka = {
+        x: canvas.width / 2 + 50,
+        y: canvas.height - groundHeight - 32, 
+        width: 32,
+        height: 32,
+        color: '#e74c3c',
+        speed: 5,
+        dx: 0,
+        basketOffsetX: 20,
+        basketWidth: 12
+    };
+
+    const mirecek = {
+        x: -40,
+        y: canvas.height - groundHeight - 34, 
+        width: 32,
+        height: 34,
+        color: '#3498db',
+        pantsColor: '#2c3e50',
+        speed: 2,
+        active: false
+    };
+
+    let apricots = [];
+    let spawnRate = 60; 
+    let frameCount = 0;
+
+    // --- OVLÁDÁNÍ KLÁVESNICÍ ---
+    document.addEventListener('keydown', (e) => {
+        if (isCutscene || gameOver) return;
+        if (e.key === 'ArrowRight' || e.key === 'd') adelka.dx = adelka.speed;
+        if (e.key === 'ArrowLeft' || e.key === 'a') adelka.dx = -adelka.speed;
+    });
+
+    document.addEventListener('keyup', (e) => {
+        if (e.key === 'ArrowRight' || e.key === 'd') adelka.dx = 0;
+        if (e.key === 'ArrowLeft' || e.key === 'a') adelka.dx = 0;
+    });
+
+    // --- OVLÁDÁNÍ DOTYKEM ---
+    function startMove(direction) {
+        if (isCutscene || gameOver) return;
+        adelka.dx = direction * adelka.speed;
+    }
+    function stopMove() {
+        adelka.dx = 0;
+    }
+
+    // Levé tlačítko
+    btnLeft.addEventListener('mousedown', () => startMove(-1));
+    btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); startMove(-1); });
+    btnLeft.addEventListener('mouseup', stopMove);
+    btnLeft.addEventListener('touchend', stopMove);
+    btnLeft.addEventListener('mouseleave', stopMove); // Pojistka když vyjedeš myší
+
+    // Pravé tlačítko
+    btnRight.addEventListener('mousedown', () => startMove(1));
+    btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); startMove(1); });
+    btnRight.addEventListener('mouseup', stopMove);
+    btnRight.addEventListener('touchend', stopMove);
+    btnRight.addEventListener('mouseleave', stopMove);
+
+    // --- KRESLENÍ ---
+    function drawCharacter(char, isMale) {
+        const baseX = Math.round(char.x);
+        const baseY = Math.round(char.y);
+
+        // Hlava
+        ctx.fillStyle = '#FFCC99';
+        ctx.fillRect(baseX + 8, baseY, 16, 12);
+        
+        // Vlasy
+        if (isMale) {
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillRect(baseX + 6, baseY, 20, 6);
+        } else {
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(baseX + 4, baseY, 24, 4);
+            ctx.fillRect(baseX + 4, baseY + 4, 4, 8);
+        }
+        
+        // Tělo
+        ctx.fillStyle = char.color;
+        ctx.fillRect(baseX + 8, baseY + 12, 16, 14);
+
+        // Nohy / Sukně
+        if (isMale) {
+            ctx.fillStyle = char.pantsColor;
+            ctx.fillRect(baseX + 8, baseY + 26, 16, 8);
+        } else {
+            ctx.fillRect(baseX + 6, baseY + 26, 20, 6);
+        }
+
+        // Košík
+        if (!isMale) {
+            ctx.fillStyle = '#D2691E';
+            ctx.fillRect(baseX + char.basketOffsetX, baseY + 16, char.basketWidth, 12); 
+            ctx.fillRect(baseX + char.basketOffsetX, baseY + 12, char.basketWidth, 4);
+        }
+    }
+
+    function drawApricot(x, y) {
+        ctx.fillStyle = '#FFA500'; 
+        ctx.fillRect(x, y + 4, apricotSize, apricotSize - 4);
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(x + 4, y + 8, 4, 4);
+        ctx.fillStyle = '#228B22'; 
+        ctx.fillRect(x + 4, y, 4, 4);
+    }
+
+    function drawBackground() {
+        ctx.fillStyle = '#2ecc71';
+        ctx.fillRect(0, canvas.height - groundHeight, canvas.width, groundHeight);
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(40, 0, 30, canvas.height - groundHeight);
+        ctx.fillRect(250, 0, 20, canvas.height - groundHeight);
+        ctx.fillStyle = '#228B22';
+        ctx.fillRect(0, 0, canvas.width, 40);
+        ctx.fillStyle = '#32CD32';
+        ctx.fillRect(20, 20, canvas.width-40, 30);
+    }
+
+    function drawHeart(x, y) {
+        ctx.fillStyle = '#e74c3c';
+        ctx.fillRect(x + 4, y, 4, 4);
+        ctx.fillRect(x + 12, y, 4, 4);
+        ctx.fillRect(x, y + 4, 20, 4);
+        ctx.fillRect(x + 4, y + 8, 12, 4);
+        ctx.fillRect(x + 8, y + 12, 4, 4);
+    }
+
+    // --- HLAVNÍ SMYČKA ---
+    function update() {
+        if (gameOver && kissHappened) return;
+
+        if (!isCutscene) {
+            // FÁZE 1
+            adelka.x += adelka.dx;
+            if (adelka.x < 0) adelka.x = 0;
+            if (adelka.x + adelka.width > canvas.width) adelka.x = canvas.width - adelka.width;
+
+            if (score < winScore) {
+                frameCount++;
+                if (frameCount % spawnRate === 0) {
+                    apricots.push({
+                        x: Math.random() * (canvas.width - apricotSize),
+                        y: -apricotSize,
+                        speed: Math.random() * 2 + 1
+                    });
+                }
+            } else {
+                isCutscene = true;
+                apricots = []; 
+                mirecek.active = true;
+                adelka.dx = 0; 
+            }
+
+            for (let i = apricots.length - 1; i >= 0; i--) {
+                apricots[i].y += apricots[i].speed;
+                const basketRect = {
+                    x: adelka.x + adelka.basketOffsetX,
+                    y: adelka.y + 12,
+                    width: adelka.basketWidth,
+                    height: 16
+                };
+                if (
+                    apricots[i].x < basketRect.x + basketRect.width &&
+                    apricots[i].x + apricotSize > basketRect.x &&
+                    apricots[i].y < basketRect.y + basketRect.height &&
+                    apricots[i].y + apricotSize > basketRect.y
+                ) {
+                    score++;
+                    apricots.splice(i, 1);
