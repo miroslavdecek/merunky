@@ -92,7 +92,6 @@
     // --- POSTAVY ---
     const adelka = {
         x: canvas.width / 2,
-        // ZMĚNA VÝŠKY ZPĚT NA 64
         y: canvas.height - groundHeight - 64, 
         width: 44,
         height: 64, 
@@ -105,7 +104,6 @@
 
     const mirecek = {
         x: -60,
-        // ZMĚNA VÝŠKY ZPĚT NA 66
         y: canvas.height - groundHeight - 66, 
         width: 44,
         height: 66,
@@ -157,43 +155,38 @@
     btnRight.addEventListener('mouseup', stopMove);
     btnRight.addEventListener('touchend', stopMove);
 
-    // --- KRESLENÍ STROMU ---
+    // --- KRESLENÍ STROMU (Zpět na starý hranatý styl) ---
     function drawTree(x, height) {
         const trunkW = 40;
         const trunkH = height;
         const trunkX = x + 30;
         const trunkY = canvas.height - groundHeight - trunkH;
 
+        // Kmen
         ctx.fillStyle = '#8B4513';
         ctx.fillRect(trunkX, trunkY, trunkW, trunkH);
-        ctx.fillRect(trunkX - 20, trunkY + 50, 20, 10);
 
-        const crownBaseY = trunkY - 20;
-        ctx.fillStyle = '#228B22'; 
-        ctx.fillRect(x, crownBaseY, 100, 60);
-        ctx.fillRect(x - 20, crownBaseY - 20, 140, 60);
-        ctx.fillStyle = '#32CD32'; 
-        ctx.fillRect(x + 10, crownBaseY - 40, 80, 60);
-        ctx.fillRect(x - 10, crownBaseY - 10, 120, 30);
-        ctx.fillStyle = '#7CFC00';
-        ctx.fillRect(x + 20, crownBaseY - 30, 10, 10);
-        ctx.fillRect(x + 70, crownBaseY, 10, 10);
+        // Koruna - jednoduché hranaté bloky
+        ctx.fillStyle = '#228B22'; // Tmavší zelená
+        ctx.fillRect(x, trunkY - 60, 100, 60); // Hlavní blok
+        ctx.fillStyle = '#32CD32'; // Světlejší zelená vršek
+        ctx.fillRect(x + 10, trunkY - 90, 80, 30); // Vršek
     }
 
-    // --- KRESLENÍ POSTAV (BEZ OBLIČEJE) ---
+    // --- KRESLENÍ POSTAV (ZCELA BEZ OBLIČEJE) ---
     function drawCharacter(char, isMale) {
         const x = Math.round(char.x);
         const y = Math.round(char.y);
         const w = char.width;
         
-        // --- 1. ZADNÍ VLASY ---
+        // 1. ZADNÍ VLASY (Adélka)
         if (!isMale) {
             ctx.fillStyle = '#5D4037'; 
             ctx.fillRect(x - 2, y + 10, w + 4, char.height - 10); 
         }
 
-        // --- 2. TĚLO ---
-        const headSize = 28; 
+        // 2. TĚLO
+        const headSize = 24; // Menší hlava, více "retro"
         const bodyY = y + headSize;
         const bodyH = char.height - headSize;
 
@@ -209,29 +202,24 @@
             ctx.fillRect(x + 2, bodyY + 20, w - 4, bodyH - 20); 
         }
 
-        // --- 3. HLAVA (Pouze pleťová barva, bez očí a pusy) ---
-        ctx.fillStyle = '#FFE0BD'; // Světlá pleťová
-        // Kreslíme jen prázdný obdélník obličeje
-        ctx.fillRect(x + 4, y, w - 8, headSize);
+        // 3. HLAVA (Pouze pleťová barva, žádné detaily)
+        ctx.fillStyle = '#FFE0BD'; // Pleť
+        ctx.fillRect(x + 6, y + 4, w - 12, headSize - 4);
 
-        // --- 4. PŘEDNÍ VLASY (Ofina) ---
+        // 4. VLASY VRŠEK (Jednoduché)
         if (isMale) {
             ctx.fillStyle = '#2c3e50';
             ctx.fillRect(x + 4, y, w - 8, 6); 
-            ctx.fillRect(x + 2, y, 4, 12); 
         } else {
             ctx.fillStyle = '#5D4037';
             ctx.fillRect(x + 2, y, w - 4, 8); 
-            ctx.fillRect(x, y, 6, headSize); 
-            ctx.fillRect(x + w - 6, y, 6, headSize);
         }
 
-        // --- 5. KOŠÍK ---
+        // 5. KOŠÍK
         if (!isMale) {
             ctx.fillStyle = '#D2691E';
-            const basketX = char.facingLeft ? x - 10 : x + w - 14;
-            ctx.fillRect(basketX, bodyY + 12, char.basketWidth, 16); 
-            ctx.fillRect(basketX, bodyY + 8, char.basketWidth, 4); 
+            const basketX = char.facingLeft ? x - 8 : x + w - 16;
+            ctx.fillRect(basketX, bodyY + 10, char.basketWidth, 14); 
         }
     }
 
@@ -242,7 +230,6 @@
         ctx.fillRect(x + 6, y + 8, 6, 6); 
         ctx.fillStyle = '#228B22'; 
         ctx.fillRect(x + 10, y, 4, 4); 
-        ctx.fillRect(x + 12, y + 2, 6, 3); 
     }
 
     function drawBackground() {
@@ -252,6 +239,7 @@
         ctx.fillStyle = '#27ae60';
         ctx.fillRect(0, canvas.height - groundHeight, canvas.width, 10);
         
+        // Vykreslení starých hranatých stromů
         drawTree(50, 250);   
         drawTree(650, 220);  
     }
@@ -296,9 +284,9 @@
                 apricots[i].y += apricots[i].speed;
                 
                 const basketRect = {
-                    x: adelka.x - 20,
+                    x: adelka.x - 10,
                     y: adelka.y + 20,
-                    width: adelka.width + 40,
+                    width: adelka.width + 20,
                     height: 50
                 };
 
