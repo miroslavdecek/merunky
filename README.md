@@ -1,2 +1,2 @@
-# Hokuspokus
-Nevim
+# merunky
+hra o chytani merunek
