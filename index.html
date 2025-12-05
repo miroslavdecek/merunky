@@ -147,7 +147,7 @@
     btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); startMove(-1); });
     btnLeft.addEventListener('mouseup', stopMove);
     btnLeft.addEventListener('touchend', stopMove);
-    btnLeft.addEventListener('mouseleave', stopMove); // Pojistka když vyjedeš myší
+    btnLeft.addEventListener('mouseleave', stopMove); 
 
     // Pravé tlačítko
     btnRight.addEventListener('mousedown', () => startMove(1));
@@ -167,12 +167,15 @@
         
         // Vlasy
         if (isMale) {
+            // Mireček - krátké tmavé
             ctx.fillStyle = '#2c3e50';
             ctx.fillRect(baseX + 6, baseY, 20, 6);
         } else {
+            // Adélka - hnědé DLOUHÉ vlasy (ÚPRAVA ZDE)
             ctx.fillStyle = '#8B4513';
-            ctx.fillRect(baseX + 4, baseY, 24, 4);
-            ctx.fillRect(baseX + 4, baseY + 4, 4, 8);
+            ctx.fillRect(baseX + 4, baseY, 24, 4);    // Horní část
+            // Prodloužení vlasů dolů přes záda/šaty
+            ctx.fillRect(baseX + 4, baseY + 4, 24, 22); 
         }
         
         // Tělo
@@ -267,3 +270,61 @@
                 ) {
                     score++;
                     apricots.splice(i, 1);
+                } else if (apricots[i].y > canvas.height) {
+                    apricots.splice(i, 1);
+                }
+            }
+        } else if (isCutscene && !kissHappened) {
+            // FÁZE 2
+            const targetX = adelka.x - 30;
+            if (mirecek.x < targetX) {
+                mirecek.x += mirecek.speed;
+            } else {
+                kissHappened = true;
+                setTimeout(() => { gameOver = true; }, 3000);
+            }
+        }
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawBackground();
+        drawCharacter(adelka, false);
+
+        if (mirecek.active) drawCharacter(mirecek, true);
+        for (const apricot of apricots) drawApricot(apricot.x, apricot.y);
+
+        ctx.fillStyle = 'white';
+        ctx.font = '16px "Courier New"';
+        if (!isCutscene && !gameOver) {
+            ctx.fillText('Košík: ' + score + ' / ' + winScore, 10, 30);
+        }
+
+        if (kissHappened) drawHeart(adelka.x - 15, adelka.y - 20);
+
+        if (gameOver) {
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#FF69B4';
+            ctx.font = '24px "Courier New"';
+            ctx.textAlign = 'center';
+            ctx.fillText('LÁSKA ZVÍTĚZILA!', canvas.width / 2, canvas.height / 2);
+            
+            ctx.fillStyle = 'white';
+            ctx.font = '14px "Courier New"';
+            // UPRAVENÝ VÍTĚZNÝ TEXT ZDE:
+            ctx.fillText('Adélka s Mirečkem mají 15 meruněk', canvas.width / 2, canvas.height / 2 + 30);
+        }
+    }
+
+    function gameLoop() {
+        update();
+        draw();
+        requestAnimationFrame(gameLoop);
+    }
+
+    // SPUSTIT HRU
+    gameLoop();
+</script>
+</body>
+</html>
