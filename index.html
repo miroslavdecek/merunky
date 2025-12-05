@@ -10,7 +10,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh; /* Aby se to centrovalo i na vysokých monitorech */
+            min-height: 100vh;
             margin: 0;
             color: white;
             font-family: 'Courier New', Courier, monospace;
@@ -25,37 +25,37 @@
             background-color: #87CEEB;
             image-rendering: pixelated;
             box-shadow: 0 0 30px rgba(0,0,0,0.6);
-            /* ZMĚNA: Hra se roztáhne na 95% šířky, ale max do výšky okna */
             width: 95vw;
-            max-width: 1000px; /* Omezení, aby to na 4K monitoru nebylo obří */
+            max-width: 1000px; 
             height: auto;
-            max-height: 80vh; /* Aby zbylo místo na tlačítka */
+            max-height: 75vh; /* Trochu menší výška, aby zbyl plac na tlačítka */
             display: block;
         }
 
         #controls {
             display: flex;
-            gap: 60px; /* Větší mezera mezi tlačítky */
+            gap: 40px;
             margin-top: 15px;
             width: 100%;
             justify-content: center;
+            padding-bottom: 20px;
         }
 
         .btn {
-            width: 100px; /* Větší tlačítka */
-            height: 80px;
+            width: 90px;
+            height: 70px;
             background-color: #e67e22;
             border: 4px solid #d35400;
             border-radius: 20px;
-            font-size: 40px;
+            font-size: 35px;
             color: white;
             cursor: pointer;
             user-select: none; 
             -webkit-user-select: none;
-            -webkit-tap-highlight-color: transparent;
             display: flex;
             justify-content: center;
             align-items: center;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .btn:active {
@@ -86,31 +86,32 @@
     let isCutscene = false;
     let kissHappened = false;
 
-    const groundHeight = 50; 
-    const apricotSize = 24; // Větší meruňky
+    const groundHeight = 60; 
+    const apricotSize = 26;
 
     // --- POSTAVY ---
     const adelka = {
         x: canvas.width / 2,
-        y: canvas.height - groundHeight - 64, // Vyšší postava (64px)
-        width: 40,
-        height: 64,
-        color: '#e74c3c', // Barva šatů
-        speed: 9, // Rychlejší pohyb
+        y: canvas.height - groundHeight - 70, // Ještě vyšší
+        width: 44,
+        height: 70,
+        color: '#e74c3c', 
+        speed: 9, 
         dx: 0,
-        basketOffsetX: 32,
-        basketWidth: 20
+        facingLeft: false, // Sledujeme, kam se dívá
+        basketWidth: 24
     };
 
     const mirecek = {
         x: -60,
-        y: canvas.height - groundHeight - 66, 
-        width: 40,
-        height: 66,
+        y: canvas.height - groundHeight - 72, 
+        width: 44,
+        height: 72,
         color: '#3498db',
         pantsColor: '#2c3e50',
         speed: 5,
-        active: false
+        active: false,
+        facingLeft: false
     };
 
     let apricots = [];
@@ -120,8 +121,14 @@
     // --- OVLÁDÁNÍ ---
     document.addEventListener('keydown', (e) => {
         if (isCutscene || gameOver) return;
-        if (e.key === 'ArrowRight' || e.key === 'd') adelka.dx = adelka.speed;
-        if (e.key === 'ArrowLeft' || e.key === 'a') adelka.dx = -adelka.speed;
+        if (e.key === 'ArrowRight' || e.key === 'd') {
+            adelka.dx = adelka.speed;
+            adelka.facingLeft = false;
+        }
+        if (e.key === 'ArrowLeft' || e.key === 'a') {
+            adelka.dx = -adelka.speed;
+            adelka.facingLeft = true;
+        }
     });
 
     document.addEventListener('keyup', (e) => {
@@ -132,6 +139,7 @@
     function startMove(direction) {
         if (isCutscene || gameOver) return;
         adelka.dx = direction * adelka.speed;
+        adelka.facingLeft = direction < 0;
     }
     function stopMove() {
         adelka.dx = 0;
@@ -147,100 +155,161 @@
     btnRight.addEventListener('mouseup', stopMove);
     btnRight.addEventListener('touchend', stopMove);
 
-    // --- KRESLENÍ POSTAV (S OBLIČEJEM) ---
+    // --- KRESLENÍ STROMU (VYLEPŠENÉ) ---
+    function drawTree(x, height) {
+        const trunkW = 40;
+        const trunkH = height;
+        const trunkX = x + 30;
+        const trunkY = canvas.height - groundHeight - trunkH;
+
+        // Kmen
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(trunkX, trunkY, trunkW, trunkH);
+        
+        // Větev (detail)
+        ctx.fillRect(trunkX - 20, trunkY + 50, 20, 10);
+
+        // KORUNA STROMU (Skládaná z více tvarů pro hezčí vzhled)
+        const crownBaseY = trunkY - 20;
+        
+        // Tmavší zelená (spodek)
+        ctx.fillStyle = '#228B22'; 
+        ctx.fillRect(x, crownBaseY, 100, 60);
+        ctx.fillRect(x - 20, crownBaseY - 20, 140, 60);
+
+        // Světlejší zelená (vršek - dává tomu objem)
+        ctx.fillStyle = '#32CD32'; 
+        ctx.fillRect(x + 10, crownBaseY - 40, 80, 60);
+        ctx.fillRect(x - 10, crownBaseY - 10, 120, 30);
+        
+        // Pár "listů" (detail)
+        ctx.fillStyle = '#7CFC00';
+        ctx.fillRect(x + 20, crownBaseY - 30, 10, 10);
+        ctx.fillRect(x + 70, crownBaseY, 10, 10);
+    }
+
+    // --- KRESLENÍ POSTAV (DETAILNÍ OBLIČEJ) ---
     function drawCharacter(char, isMale) {
         const x = Math.round(char.x);
         const y = Math.round(char.y);
         const w = char.width;
-
-        // 1. VLASY (Základ vzadu)
-        if (isMale) {
-            ctx.fillStyle = '#2c3e50'; // Černé vlasy
-            ctx.fillRect(x, y, w, 20); 
-        } else {
-            ctx.fillStyle = '#8B4513'; // Hnědé vlasy
-            ctx.fillRect(x - 4, y, w + 8, char.height); // Dlouhé vlasy až dolů a širší
+        
+        // Určení směru pohledu pro oči
+        let lookOffset = 0;
+        if (char.facingLeft) lookOffset = -4;
+        else lookOffset = 4;
+        
+        // Pokud stojí, dívá se tam, kam šel naposledy (nebo dopředu)
+        if (char.dx === 0 && !isMale) {
+             // U Adélky necháme oči uprostřed, když stojí, nebo podle posledního směru
+             // Pro jednoduchost necháme offset podle facingLeft
         }
 
-        // 2. OBLIČEJ (Pleťová barva)
-        ctx.fillStyle = '#FFCC99';
-        // Kreslíme čtverec obličeje doprostřed hlavy
-        ctx.fillRect(x + 4, y + 4, w - 8, 24); 
-
-        // 3. OČI
-        ctx.fillStyle = '#000'; // Černé oči
-        ctx.fillRect(x + 10, y + 12, 4, 4); // Levé oko
-        ctx.fillRect(x + w - 14, y + 12, 4, 4); // Pravé oko
-
-        // 4. ÚSMĚV / PUSA
-        ctx.fillStyle = '#c0392b';
-        ctx.fillRect(x + 14, y + 22, 12, 2); // Úsměv
-
-        // 5. VLASY (Ofina / Úprava účesu)
-        if (isMale) {
-             ctx.fillStyle = '#2c3e50';
-             ctx.fillRect(x, y, w, 6); // Ofina Mireček
-        } else {
-             ctx.fillStyle = '#8B4513';
-             ctx.fillRect(x - 2, y, w + 4, 6); // Ofina Adélka
-             // Boky vlasů
-             ctx.fillRect(x - 2, y, 6, 28); 
-             ctx.fillRect(x + w - 4, y, 6, 28);
+        // --- 1. ZADNÍ VLASY ---
+        if (!isMale) {
+            ctx.fillStyle = '#5D4037'; // Tmavší hnědá
+            // Dlouhé vlasy vzadu
+            ctx.fillRect(x - 2, y + 10, w + 4, char.height - 10); 
         }
 
-        // 6. TĚLO (Oblečení)
-        // Posuneme tělo trochu dolů pod hlavu
-        const bodyY = y + 28;
-        const bodyH = char.height - 28;
+        // --- 2. TĚLO (Oblečení) ---
+        const headSize = 28; // Velká hlava
+        const bodyY = y + headSize;
+        const bodyH = char.height - headSize;
 
         ctx.fillStyle = char.color;
-        ctx.fillRect(x + 2, bodyY, w - 4, 20); // Horní část těla
+        ctx.fillRect(x + 4, bodyY, w - 8, 20); // Horní část těla
 
-        // 7. SPODEK (Kalhoty / Sukně)
+        // Nohy / Spodek
         if (isMale) {
             ctx.fillStyle = char.pantsColor;
-            ctx.fillRect(x + 4, bodyY + 20, w - 8, bodyH - 20); // Kalhoty
+            ctx.fillRect(x + 4, bodyY + 20, w - 8, bodyH - 20); 
             // Mezera mezi nohama
-            ctx.fillStyle = '#87CEEB'; // Barva pozadí
-            ctx.fillRect(x + 18, bodyY + 25, 4, bodyH - 25);
+            ctx.fillStyle = '#87CEEB'; // Pozadí
+            ctx.fillRect(x + w/2 - 2, bodyY + 25, 4, bodyH - 25);
         } else {
-            // Šaty pokračují
-            ctx.fillRect(x, bodyY + 20, w, bodyH - 20); 
+            // Sukně
+            ctx.fillRect(x + 2, bodyY + 20, w - 4, bodyH - 20); 
         }
 
-        // 8. KOŠÍK (jen Adélka)
+        // --- 3. HLAVA A OBLIČEJ (To nejdůležitější!) ---
+        
+        // Pleť (Obličej)
+        ctx.fillStyle = '#FFE0BD'; // Světlá pleťová
+        ctx.fillRect(x + 4, y, w - 8, headSize);
+
+        // Oči (Bělmo + Panenka)
+        // Levé oko
+        ctx.fillStyle = 'white';
+        ctx.fillRect(x + 8, y + 10, 10, 10);
+        ctx.fillStyle = 'black';
+        ctx.fillRect(x + 10 + lookOffset, y + 12, 4, 4); // Panenka se hýbe
+
+        // Pravé oko
+        ctx.fillStyle = 'white';
+        ctx.fillRect(x + w - 18, y + 10, 10, 10);
+        ctx.fillStyle = 'black';
+        ctx.fillRect(x + w - 16 + lookOffset, y + 12, 4, 4); // Panenka se hýbe
+
+        // Pusa
+        ctx.fillStyle = '#D35400';
+        ctx.fillRect(x + w/2 - 4, y + 22, 8, 2);
+
+        // Tvářenky (roztomilost)
+        ctx.fillStyle = '#FFB6C1';
+        ctx.fillRect(x + 6, y + 18, 4, 2);
+        ctx.fillRect(x + w - 10, y + 18, 4, 2);
+
+        // --- 4. PŘEDNÍ VLASY (Ofina) ---
+        if (isMale) {
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillRect(x + 4, y, w - 8, 6); // Krátká ofina
+            ctx.fillRect(x + 2, y, 4, 12); // Kotlety
+        } else {
+            ctx.fillStyle = '#5D4037';
+            ctx.fillRect(x + 2, y, w - 4, 8); // Ofina
+            // Prameny po stranách tváře
+            ctx.fillRect(x, y, 6, headSize); 
+            ctx.fillRect(x + w - 6, y, 6, headSize);
+        }
+
+        // --- 5. KOŠÍK ---
         if (!isMale) {
             ctx.fillStyle = '#D2691E';
-            // Košík drží v ruce
-            ctx.fillRect(x + char.basketOffsetX, bodyY + 10, char.basketWidth, 16); 
-            ctx.fillRect(x + char.basketOffsetX, bodyY + 6, char.basketWidth, 4); // Ucho
+            // Košík drží v ruce (pozice se mění podle směru)
+            const basketX = char.facingLeft ? x - 10 : x + w - 14;
+            
+            ctx.fillRect(basketX, bodyY + 12, char.basketWidth, 16); 
+            ctx.fillRect(basketX, bodyY + 8, char.basketWidth, 4); // Ucho
         }
     }
 
     function drawApricot(x, y) {
         ctx.fillStyle = '#FFA500'; 
         ctx.fillRect(x, y + 4, apricotSize, apricotSize - 4);
+        // Odlesk
         ctx.fillStyle = '#FFD700';
         ctx.fillRect(x + 6, y + 8, 6, 6); 
+        // Stopka s lístkem
         ctx.fillStyle = '#228B22'; 
-        ctx.fillRect(x + 8, y, 6, 6); 
+        ctx.fillRect(x + 10, y, 4, 4); 
+        ctx.fillRect(x + 12, y + 2, 6, 3); 
     }
 
     function drawBackground() {
+        // Obloha (vymazání)
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Tráva
         ctx.fillStyle = '#2ecc71';
         ctx.fillRect(0, canvas.height - groundHeight, canvas.width, groundHeight);
+        // Detail trávy (proužek)
+        ctx.fillStyle = '#27ae60';
+        ctx.fillRect(0, canvas.height - groundHeight, canvas.width, 10);
         
-        // Strom 1
-        ctx.fillStyle = '#8B4513';
-        ctx.fillRect(80, 0, 50, canvas.height - groundHeight);
-        // Strom 2
-        ctx.fillRect(650, 0, 40, canvas.height - groundHeight); 
-        
-        // Listí
-        ctx.fillStyle = '#228B22';
-        ctx.fillRect(0, 0, canvas.width, 100);
-        ctx.fillStyle = '#32CD32';
-        ctx.fillRect(40, 60, canvas.width-80, 50);
+        // Vykreslení hezčích stromů
+        drawTree(50, 250);   // Levý strom
+        drawTree(650, 220);  // Pravý strom
     }
 
     function drawHeart(x, y) {
@@ -253,6 +322,7 @@
         ctx.fillRect(x + 4*size, y + 6*size, 2*size, 2*size);
     }
 
+    // --- UPDATE ---
     function update() {
         if (gameOver && kissHappened) return;
 
@@ -275,17 +345,19 @@
                 apricots = []; 
                 mirecek.active = true;
                 adelka.dx = 0; 
+                // Otočíme Adélku k Mirečkovi (přichází zleva, tak se dívá doleva)
+                adelka.facingLeft = true; 
             }
 
             for (let i = apricots.length - 1; i >= 0; i--) {
                 apricots[i].y += apricots[i].speed;
                 
-                // Detekce kolize
+                // Detekce kolize (Košík je teď širší zóna kolem hráče)
                 const basketRect = {
-                    x: adelka.x + adelka.basketOffsetX - 5,
-                    y: adelka.y + 40, // Upraveno pro vyšší postavu
-                    width: adelka.basketWidth + 10,
-                    height: 30
+                    x: adelka.x - 20,
+                    y: adelka.y + 20,
+                    width: adelka.width + 40,
+                    height: 50
                 };
 
                 if (
@@ -301,9 +373,11 @@
                 }
             }
         } else if (isCutscene && !kissHappened) {
+            // Mireček jde k Adélce
             const targetX = adelka.x - 50; 
             if (mirecek.x < targetX) {
                 mirecek.x += mirecek.speed;
+                mirecek.facingLeft = false; // Jde doprava
             } else {
                 kissHappened = true;
                 setTimeout(() => { gameOver = true; }, 3000);
@@ -312,7 +386,6 @@
     }
 
     function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
         drawBackground();
         drawCharacter(adelka, false);
 
@@ -321,7 +394,11 @@
 
         ctx.fillStyle = 'white';
         ctx.font = 'bold 30px "Courier New"';
+        // Stín pod textem, aby byl čitelný na stromech
+        ctx.fillStyle = 'black';
         if (!isCutscene && !gameOver) {
+            ctx.fillText('Košík: ' + score + ' / ' + winScore, 22, 52);
+            ctx.fillStyle = 'white';
             ctx.fillText('Košík: ' + score + ' / ' + winScore, 20, 50);
         }
 
