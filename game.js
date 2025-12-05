@@ -1,137 +1,245 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Player
-const player = {
-    x: canvas.width / 2 - 25,
-    y: canvas.height - 50,
-    width: 50,
-    height: 50,
-    color: 'rgb(255, 182, 193)',
-    speed: 5,
-    dx: 0
-};
+// --- TLAČÍTKA PRO MOBIL ---
+const btnLeft = document.getElementById('btnLeft');
+const btnRight = document.getElementById('btnRight');
 
-// Apricots
-const apricots = [];
-const apricotProps = {
-    width: 20,
-    height: 20,
-    color: 'orange',
-    speed: 2
-};
-
+// --- NASTAVENÍ HRY ---
 let score = 0;
+const winScore = 15;
 let gameOver = false;
+let isCutscene = false;
+let kissHappened = false;
 
-// Draw player
-function drawPlayer() {
-    ctx.fillStyle = player.color;
-    ctx.fillRect(player.x, player.y, player.width, player.height);
+const groundHeight = 20;
+const apricotSize = 12; 
+
+// --- POSTAVY ---
+const adelka = {
+    x: canvas.width / 2 + 50,
+    y: canvas.height - groundHeight - 32, 
+    width: 32,
+    height: 32,
+    color: '#e74c3c',
+    speed: 5,
+    dx: 0,
+    basketOffsetX: 20,
+    basketWidth: 12
+};
+
+const mirecek = {
+    x: -40,
+    y: canvas.height - groundHeight - 34, 
+    width: 32,
+    height: 34,
+    color: '#3498db',
+    pantsColor: '#2c3e50',
+    speed: 2,
+    active: false
+};
+
+// --- MERUŇKY ---
+let apricots = [];
+let spawnRate = 60; 
+let frameCount = 0;
+
+// --- OVLÁDÁNÍ (KLÁVESNICE) ---
+document.addEventListener('keydown', (e) => {
+    if (isCutscene || gameOver) return;
+    if (e.key === 'ArrowRight' || e.key === 'd') adelka.dx = adelka.speed;
+    if (e.key === 'ArrowLeft' || e.key === 'a') adelka.dx = -adelka.speed;
+});
+
+document.addEventListener('keyup', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'd') adelka.dx = 0;
+    if (e.key === 'ArrowLeft' || e.key === 'a') adelka.dx = 0;
+});
+
+// --- OVLÁDÁNÍ (DOTYK / MYŠ NA TLAČÍTKA) ---
+
+// Funkce pro start pohybu
+function startMove(direction) {
+    if (isCutscene || gameOver) return;
+    adelka.dx = direction * adelka.speed;
 }
 
-// Draw apricots
-function drawApricots() {
-    apricots.forEach(apricot => {
-        ctx.fillStyle = apricotProps.color;
-        ctx.fillRect(apricot.x, apricot.y, apricotProps.width, apricotProps.height);
-    });
+// Funkce pro stop pohybu
+function stopMove() {
+    adelka.dx = 0;
 }
 
-// Move player
-function movePlayer() {
-    player.x += player.dx;
+// Přidání posluchačů pro myš i dotyk (pro jistotu obojí)
+// Tlačítko DOLEVA
+btnLeft.addEventListener('mousedown', () => startMove(-1));
+btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); startMove(-1); }); // preventDefault brání scrollování
+btnLeft.addEventListener('mouseup', stopMove);
+btnLeft.addEventListener('touchend', stopMove);
 
-    // Wall detection
-    if (player.x < 0) {
-        player.x = 0;
+// Tlačítko DOPRAVA
+btnRight.addEventListener('mousedown', () => startMove(1));
+btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); startMove(1); });
+btnRight.addEventListener('mouseup', stopMove);
+btnRight.addEventListener('touchend', stopMove);
+
+
+// --- KRESLENÍ ---
+function drawCharacter(char, isMale) {
+    const baseX = Math.round(char.x);
+    const baseY = Math.round(char.y);
+
+    // Hlava
+    ctx.fillStyle = '#FFCC99';
+    ctx.fillRect(baseX + 8, baseY, 16, 12);
+    
+    // Vlasy
+    if (isMale) {
+        ctx.fillStyle = '#2c3e50';
+        ctx.fillRect(baseX + 6, baseY, 20, 6);
+    } else {
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(baseX + 4, baseY, 24, 4);
+        ctx.fillRect(baseX + 4, baseY + 4, 4, 8);
+    }
+    
+    // Tělo
+    ctx.fillStyle = char.color;
+    ctx.fillRect(baseX + 8, baseY + 12, 16, 14);
+
+    // Spodek
+    if (isMale) {
+        ctx.fillStyle = char.pantsColor;
+        ctx.fillRect(baseX + 8, baseY + 26, 16, 8);
+    } else {
+        ctx.fillRect(baseX + 6, baseY + 26, 20, 6);
     }
 
-    if (player.x + player.width > canvas.width) {
-        player.x = canvas.width - player.width;
+    // Košík
+    if (!isMale) {
+        ctx.fillStyle = '#D2691E';
+        ctx.fillRect(baseX + char.basketOffsetX, baseY + 16, char.basketWidth, 12); 
+        ctx.fillRect(baseX + char.basketOffsetX, baseY + 12, char.basketWidth, 4);
     }
 }
 
-// Game loop
-function gameLoop() {
-    if (gameOver) {
-        ctx.fillStyle = 'black';
-        ctx.font = '50px Arial';
-        ctx.fillText('Game Over', canvas.width / 2 - 150, canvas.height / 2);
-        ctx.font = '20px Arial';
-        ctx.fillText(`Final Score: ${score}`, canvas.width / 2 - 70, canvas.height / 2 + 40);
-        return;
-    }
+function drawApricot(x, y) {
+    ctx.fillStyle = '#FFA500'; 
+    ctx.fillRect(x, y + 4, apricotSize, apricotSize - 4);
+    ctx.fillStyle = '#FFD700';
+    ctx.fillRect(x + 4, y + 8, 4, 4);
+    ctx.fillStyle = '#228B22'; 
+    ctx.fillRect(x + 4, y, 4, 4);
+}
 
-    // Clear canvas
+function drawBackground() {
+    ctx.fillStyle = '#2ecc71';
+    ctx.fillRect(0, canvas.height - groundHeight, canvas.width, groundHeight);
+    ctx.fillStyle = '#8B4513';
+    ctx.fillRect(40, 0, 30, canvas.height - groundHeight);
+    ctx.fillRect(250, 0, 20, canvas.height - groundHeight);
+    ctx.fillStyle = '#228B22';
+    ctx.fillRect(0, 0, canvas.width, 40);
+    ctx.fillStyle = '#32CD32';
+    ctx.fillRect(20, 20, canvas.width-40, 30);
+}
+
+function drawHeart(x, y) {
+    ctx.fillStyle = '#e74c3c';
+    ctx.fillRect(x + 4, y, 4, 4);
+    ctx.fillRect(x + 12, y, 4, 4);
+    ctx.fillRect(x, y + 4, 20, 4);
+    ctx.fillRect(x + 4, y + 8, 12, 4);
+    ctx.fillRect(x + 8, y + 12, 4, 4);
+}
+
+// --- HLAVNÍ SMYČKA ---
+function update() {
+    if (gameOver && kissHappened) return;
+
+    if (!isCutscene) {
+        // FÁZE 1
+        adelka.x += adelka.dx;
+        if (adelka.x < 0) adelka.x = 0;
+        if (adelka.x + adelka.width > canvas.width) adelka.x = canvas.width - adelka.width;
+
+        if (score < winScore) {
+            frameCount++;
+            if (frameCount % spawnRate === 0) {
+                apricots.push({
+                    x: Math.random() * (canvas.width - apricotSize),
+                    y: -apricotSize,
+                    speed: Math.random() * 2 + 1
+                });
+            }
+        } else {
+            isCutscene = true;
+            apricots = []; 
+            mirecek.active = true;
+            adelka.dx = 0; 
+        }
+
+        for (let i = apricots.length - 1; i >= 0; i--) {
+            apricots[i].y += apricots[i].speed;
+            const basketRect = {
+                x: adelka.x + adelka.basketOffsetX,
+                y: adelka.y + 12,
+                width: adelka.basketWidth,
+                height: 16
+            };
+            if (
+                apricots[i].x < basketRect.x + basketRect.width &&
+                apricots[i].x + apricotSize > basketRect.x &&
+                apricots[i].y < basketRect.y + basketRect.height &&
+                apricots[i].y + apricotSize > basketRect.y
+            ) {
+                score++;
+                apricots.splice(i, 1);
+            } else if (apricots[i].y > canvas.height) {
+                apricots.splice(i, 1);
+            }
+        }
+    } else if (isCutscene && !kissHappened) {
+        // FÁZE 2
+        const targetX = adelka.x - 30;
+        if (mirecek.x < targetX) {
+            mirecek.x += mirecek.speed;
+        } else {
+            kissHappened = true;
+            setTimeout(() => { gameOver = true; }, 3000);
+        }
+    }
+}
+
+function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawBackground();
+    drawCharacter(adelka, false);
 
-    drawPlayer();
-    drawApricots();
-    movePlayer();
-    updateApricots();
+    if (mirecek.active) drawCharacter(mirecek, true);
+    for (const apricot of apricots) drawApricot(apricot.x, apricot.y);
 
-    // Draw score
-    ctx.fillStyle = 'black';
-    ctx.font = '20px Arial';
-    ctx.fillText(`Score: ${score}`, 10, 20);
+    ctx.fillStyle = 'white';
+    ctx.font = '16px "Courier New"';
+    if (!isCutscene && !gameOver) {
+        ctx.fillText('Košík: ' + score + ' / ' + winScore, 10, 30);
+    }
 
+    if (kissHappened) drawHeart(adelka.x - 15, adelka.y - 20);
+
+    if (gameOver) {
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#FF69B4';
+        ctx.font = '24px "Courier New"';
+        ctx.textAlign = 'center';
+        ctx.fillText('LÁSKA ZVÍTĚZILA!', canvas.width / 2, canvas.height / 2);
+    }
+}
+
+function gameLoop() {
+    update();
+    draw();
     requestAnimationFrame(gameLoop);
 }
 
-// Spawn apricots
-function spawnApricot() {
-    const x = Math.random() * (canvas.width - apricotProps.width);
-    apricots.push({ x: x, y: 0 });
-}
-
-// Update apricots
-function updateApricots() {
-    apricots.forEach((apricot, index) => {
-        apricot.y += apricotProps.speed;
-
-        // Collision detection
-        if (
-            apricot.x < player.x + player.width &&
-            apricot.x + apricotProps.width > player.x &&
-            apricot.y < player.y + player.height &&
-            apricot.y + apricotProps.height > player.y
-        ) {
-            apricots.splice(index, 1);
-            score++;
-        }
-
-        // Off screen
-        if (apricot.y + apricotProps.height > canvas.height) {
-           gameOver = true;
-        }
-    });
-}
-
-
-// Keyboard event handlers
-function keyDown(e) {
-    if (e.key === 'Right' || e.key === 'ArrowRight') {
-        player.dx = player.speed;
-    } else if (e.key === 'Left' || e.key === 'ArrowLeft') {
-        player.dx = -player.speed;
-    }
-}
-
-function keyUp(e) {
-    if (
-        e.key === 'Right' ||
-        e.key === 'ArrowRight' ||
-        e.key === 'Left' ||
-        e.key === 'ArrowLeft'
-    ) {
-        player.dx = 0;
-    }
-}
-
-document.addEventListener('keydown', keyDown);
-document.addEventListener('keyup', keyUp);
-
-// Start game
-setInterval(spawnApricot, 2000);
 gameLoop();
