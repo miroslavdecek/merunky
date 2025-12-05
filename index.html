@@ -90,24 +90,23 @@
     const apricotSize = 26;
 
     // --- POZADÍ (Mraky a dekorace) ---
-    // Vygenerujeme mraky
     let clouds = [];
-    for(let i=0; i<5; i++) {
+    // Vygenerujeme více mraků pro plnější oblohu
+    for(let i=0; i<8; i++) {
         clouds.push({
             x: Math.random() * canvas.width,
-            y: Math.random() * 200,
-            speed: Math.random() * 0.5 + 0.2,
-            size: Math.random() * 0.5 + 0.5
+            y: Math.random() * 250, // Rozprostřeny výše
+            speed: Math.random() * 0.4 + 0.1, // Pomalejší pohyb
+            size: Math.random() * 0.6 + 0.4
         });
     }
 
-    // Vygenerujeme trávu (statická)
     let grassDetails = [];
-    for(let i=0; i<50; i++) {
+    for(let i=0; i<60; i++) {
         grassDetails.push({
             x: Math.random() * canvas.width,
-            y: canvas.height - groundHeight + Math.random() * groundHeight,
-            type: Math.random() > 0.8 ? 'flower' : 'blade'
+            y: canvas.height - groundHeight + Math.random() * groundHeight * 0.8,
+            type: Math.random() > 0.7 ? 'flower' : 'blade'
         });
     }
 
@@ -180,70 +179,59 @@
     // --- KRESLENÍ PROSTŘEDÍ ---
     
     function drawClouds() {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'; // Bělejší mraky
         for (let cloud of clouds) {
-            // Jednoduchý pixel mrak
             let cx = cloud.x;
             let cy = cloud.y;
-            let s = cloud.size * 40;
-            ctx.fillRect(cx, cy, s*2, s);
-            ctx.fillRect(cx + s, cy - s/2, s, s);
-            ctx.fillRect(cx - s/2, cy + s/2, s*1.5, s/2);
+            let s = cloud.size * 30;
+            // Klasický pixel art mrak tvar
+            ctx.fillRect(cx, cy, s*3, s);
+            ctx.fillRect(cx + s*0.5, cy - s*0.8, s*2, s);
+            ctx.fillRect(cx + s, cy + s*0.8, s*1.5, s*0.5);
             
-            // Pohyb
             cloud.x += cloud.speed;
-            if (cloud.x > canvas.width) cloud.x = -100;
+            if (cloud.x > canvas.width + s*3) cloud.x = -s*3;
         }
     }
 
     function drawMountains() {
-        // Hory v pozadí
-        ctx.fillStyle = '#607D8B'; // Šedomodrá
-        
-        // Hora 1
+        ctx.fillStyle = '#607D8B'; 
         ctx.beginPath();
-        ctx.moveTo(100, canvas.height - groundHeight);
-        ctx.lineTo(300, canvas.height - groundHeight - 200);
-        ctx.lineTo(500, canvas.height - groundHeight);
+        ctx.moveTo(0, canvas.height - groundHeight);
+        ctx.lineTo(200, canvas.height - groundHeight - 250);
+        ctx.lineTo(450, canvas.height - groundHeight);
         ctx.fill();
 
-        // Hora 2
-        ctx.fillStyle = '#546E7A';
+        ctx.fillStyle = '#78909C'; 
         ctx.beginPath();
-        ctx.moveTo(400, canvas.height - groundHeight);
-        ctx.lineTo(600, canvas.height - groundHeight - 150);
-        ctx.lineTo(800, canvas.height - groundHeight);
+        ctx.moveTo(300, canvas.height - groundHeight);
+        ctx.lineTo(550, canvas.height - groundHeight - 180);
+        ctx.lineTo(850, canvas.height - groundHeight);
         ctx.fill();
     }
 
     function drawTree(x, height) {
         const trunkW = 32;
         const trunkH = height;
-        const trunkX = x + 44; // Vycentrování kmene
+        const trunkX = x + 44; 
         const trunkY = canvas.height - groundHeight - trunkH;
 
-        // Kmen (s texturou)
         ctx.fillStyle = '#8B4513';
         ctx.fillRect(trunkX, trunkY, trunkW, trunkH);
-        ctx.fillStyle = '#654321'; // Tmavší kmen
-        ctx.fillRect(trunkX + 4, trunkY, 4, trunkH); // Detail kůry
+        ctx.fillStyle = '#654321'; 
+        ctx.fillRect(trunkX + 4, trunkY, 4, trunkH); 
 
-        // KORUNA - Vrstvená (vypadá lépe)
         const crownY = trunkY - 20;
         
-        // Spodní vrstva
-        ctx.fillStyle = '#228B22'; // Tmavá zelená
+        ctx.fillStyle = '#228B22'; 
         ctx.fillRect(x, crownY, 120, 60);
         
-        // Střední vrstva
         ctx.fillStyle = '#2E8B57'; 
         ctx.fillRect(x + 10, crownY - 40, 100, 50);
 
-        // Horní vrstva
-        ctx.fillStyle = '#3CB371'; // Světlá zelená
+        ctx.fillStyle = '#3CB371'; 
         ctx.fillRect(x + 30, crownY - 70, 60, 40);
         
-        // Detail (jablka/meruňky ve stromě - jen dekorace)
         ctx.fillStyle = '#FFA500';
         ctx.fillRect(x + 40, crownY - 10, 6, 6);
         ctx.fillRect(x + 80, crownY + 20, 6, 6);
@@ -252,32 +240,32 @@
     function drawGroundDetails() {
         for (let detail of grassDetails) {
             if (detail.type === 'blade') {
-                ctx.fillStyle = '#1E8449'; // Tmavší zelená
-                ctx.fillRect(detail.x, detail.y, 2, 6);
+                ctx.fillStyle = '#1E8449'; 
+                ctx.fillRect(detail.x, detail.y, 3, 8);
             } else {
-                // Kytička
                 ctx.fillStyle = 'white';
-                ctx.fillRect(detail.x, detail.y, 4, 4);
+                ctx.fillRect(detail.x, detail.y, 6, 6);
                 ctx.fillStyle = 'yellow';
-                ctx.fillRect(detail.x + 1, detail.y + 1, 2, 2);
+                ctx.fillRect(detail.x + 2, detail.y + 2, 2, 2);
             }
         }
     }
 
-    // --- KRESLENÍ POSTAV (BEZ OBLIČEJE) ---
+    // --- KRESLENÍ POSTAV ---
     function drawCharacter(char, isMale) {
         const x = Math.round(char.x);
         const y = Math.round(char.y);
         const w = char.width;
-        
-        // 1. ZADNÍ VLASY
+        const headSize = 24; 
+
+        // 1. ZADNÍ VLASY (Adélka - OPRAVENO)
         if (!isMale) {
             ctx.fillStyle = '#5D4037'; 
-            ctx.fillRect(x - 2, y + 10, w + 4, char.height - 10); 
+            // Rozšířeno a posunuto, aby se dotýkalo předních částí
+            ctx.fillRect(x - 4, y + 8, w + 8, char.height - 8); 
         }
 
         // 2. TĚLO
-        const headSize = 24; 
         const bodyY = y + headSize;
         const bodyH = char.height - headSize;
 
@@ -287,23 +275,27 @@
         if (isMale) {
             ctx.fillStyle = char.pantsColor;
             ctx.fillRect(x + 4, bodyY + 20, w - 8, bodyH - 20); 
-            ctx.fillStyle = '#87CEEB'; // Pozadí (mezera nohou)
+            ctx.fillStyle = '#87CEEB'; 
             ctx.fillRect(x + w/2 - 2, bodyY + 25, 4, bodyH - 25);
         } else {
             ctx.fillRect(x + 2, bodyY + 20, w - 4, bodyH - 20); 
         }
 
-        // 3. HLAVA (BEZ OBLIČEJE - jen pleť)
+        // 3. HLAVA (Pleť)
         ctx.fillStyle = '#FFE0BD'; 
         ctx.fillRect(x + 6, y + 4, w - 12, headSize - 4);
 
-        // 4. VLASY VRŠEK
+        // 4. VLASY VRŠEK/PŘEDEK
         if (isMale) {
             ctx.fillStyle = '#2c3e50';
             ctx.fillRect(x + 4, y, w - 8, 6); 
         } else {
             ctx.fillStyle = '#5D4037';
+            // Horní část
             ctx.fillRect(x + 2, y, w - 4, 8); 
+            // Boční prameny (nyní navazují na zadní část)
+            ctx.fillRect(x, y + 4, 8, headSize); 
+            ctx.fillRect(x + w - 8, y + 4, 8, headSize);
         }
 
         // 5. KOŠÍK
@@ -331,28 +323,38 @@
         ctx.fillStyle = '#87CEEB';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        drawClouds();
         drawMountains();
+        drawClouds(); // Mraky jsou zpět
         
         // Tráva
         ctx.fillStyle = '#2ecc71';
         ctx.fillRect(0, canvas.height - groundHeight, canvas.width, groundHeight);
         
-        drawGroundDetails(); // Kytičky a stébla
+        drawGroundDetails();
 
-        // Stromy
-        drawTree(50, 180);   
-        drawTree(650, 160);  
+        // VÍCE STROMŮ
+        drawTree(20, 150);
+        drawTree(250, 200); // Střední strom vzadu
+        drawTree(550, 140);
+        drawTree(700, 180);
     }
 
+    // NOVÉ SYMETRICKÉ SRDÍČKO
     function drawHeart(x, y) {
         ctx.fillStyle = '#e74c3c';
-        const size = 3; 
-        ctx.fillRect(x + 2*size, y, 2*size, 2*size);
-        ctx.fillRect(x + 6*size, y, 2*size, 2*size);
-        ctx.fillRect(x, y + 2*size, 10*size, 2*size);
-        ctx.fillRect(x + 2*size, y + 4*size, 6*size, 2*size);
-        ctx.fillRect(x + 4*size, y + 6*size, 2*size, 2*size);
+        const s = 5; // Velikost pixelu srdce
+
+        // Řada 1 (vršky)
+        ctx.fillRect(x + s, y, 2*s, s);
+        ctx.fillRect(x + 4*s, y, 2*s, s);
+        // Řada 2 a 3 (střed)
+        ctx.fillRect(x, y + s, 7*s, 2*s);
+        // Řada 4 (zužování)
+        ctx.fillRect(x + s, y + 3*s, 5*s, s);
+        // Řada 5
+        ctx.fillRect(x + 2*s, y + 4*s, 3*s, s);
+        // Řada 6 (špička)
+        ctx.fillRect(x + 3*s, y + 5*s, s, s);
     }
 
     // --- UPDATE ---
@@ -424,7 +426,6 @@
 
         ctx.fillStyle = 'white';
         ctx.font = 'bold 30px "Courier New"';
-        // Stín pro lepší čitelnost na mracích
         ctx.fillStyle = 'black';
         if (!isCutscene && !gameOver) {
             ctx.fillText('Košík: ' + score + ' / ' + winScore, 22, 52);
@@ -432,7 +433,8 @@
             ctx.fillText('Košík: ' + score + ' / ' + winScore, 20, 50);
         }
 
-        if (kissHappened) drawHeart(adelka.x - 25, adelka.y - 40);
+        // Kreslení nového symetrického srdce
+        if (kissHappened) drawHeart(adelka.x - 20, adelka.y - 45);
 
         if (gameOver) {
             ctx.fillStyle = 'rgba(0,0,0,0.6)';
